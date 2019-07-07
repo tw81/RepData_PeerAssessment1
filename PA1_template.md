@@ -9,7 +9,8 @@ output:
 ## Loading and preprocessing the data
 The data is downloaded and read using the R code below:
 
-```{r download data}
+
+```r
 destfile = "./data/dataset.zip"
 fileURL <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip"
 if (!file.exists(destfile)) {
@@ -27,92 +28,110 @@ if (!exists("act")) {
 ## What is mean total number of steps taken per day?
 
 To work this out, first, calculate the total number of steps per day, using the following code chunk.
-```{r steptotals,message=FALSE}
+
+```r
 library(dplyr)
 totsteps <- group_by(act,date) %>%
             summarise(steps = sum(steps, na.rm = TRUE))
 ```
 
 Create a histogram of the data using the chunk below, and note the output.
-```{R histogramsteps,fig.width=10}
+
+```r
 hist(totsteps$steps, main = "Histogram of total number of steps taken per day", xlab = "Number of steps per day")
 ```
 
+![](PA1_template_files/figure-html/histogramsteps-1.png)<!-- -->
+
 Find the mean and median values of the total steps per day.
-```{r stepmean}
+
+```r
 smean <- mean(totsteps$steps)
 smedian <- median(totsteps$steps)
 ```
 
-The mean number of steps taken per day is `r format(round(smean,0),big.mark=",")` and the median number is `r format(round(smedian,0),big.mark=",",scientific=FALSE)`.
+The mean number of steps taken per day is 9,354 and the median number is 10,395.
 
 
 ## What is the average daily activity pattern?
 
 To work this, out, first find the daily average of each 5-minute period
-```{r fiveminave}
+
+```r
 avestep <- group_by(act,interval) %>%
            summarise(steps = mean(steps, na.rm = TRUE))
 ```
 
 Then plot the daily average, using the code below, and note the output.
-```{r plotave,fig.width=10}
+
+```r
 with(avestep,plot(interval,steps,type = "l",xlab = "Five minute interval",
                   ylab = "average steps per day",main="Average number of steps per five minute interval"))
 ```
 
+![](PA1_template_files/figure-html/plotave-1.png)<!-- -->
+
 Identify the five minute interval with the most steps on average:
-```{r moststeps}
+
+```r
 mstep <- subset(avestep,avestep$steps==max(avestep$steps))[1,1]
 ```
 
-The 5-minute interval with the most average steps per day is interval `r mstep`.
+The 5-minute interval with the most average steps per day is interval 835.
 
 
 ## Imputing missing values
 
 Identify how many rows have missing values, using this code:
 
-```{r count_nas}
+
+```r
 nnas <- sum(is.na(act$steps))
 ```
 
-The number of missing values in the dataset is `r format(nnas,big.mark=",")`.
+The number of missing values in the dataset is 2,304.
 
 Infill the missing values with the average value for the interval. Use this code:
-```{r infill}
+
+```r
 actinfill <- merge(act,avestep,by.x="interval",by.y="interval")
 actinfill$steps.x[is.na(actinfill$steps.x)] <- actinfill$steps.y[is.na(actinfill$steps.x)]
 actinfill <- select(actinfill,interval,steps=steps.x,date)
 ```
 
 Create a histgram using the new infilled values:
-```{R histograms2,fig.width=10}
+
+```r
 totsteps2 <- group_by(actinfill,date) %>%
              summarise(steps = sum(steps, na.rm = TRUE))
 hist(totsteps2$steps, main = "Histogram of total number of steps taken per day (with missing data imputed)", 
      xlab = "Number of steps per day")
 ```
 
+![](PA1_template_files/figure-html/histograms2-1.png)<!-- -->
+
 Find the mean and median values of the total steps per day.
-```{r stepmean2}
+
+```r
 s2mean <- mean(totsteps2$steps)
 s2median <- median(totsteps2$steps)
 ```
 
-With infilled data, the mean number of steps taken per day is `r format(round(s2mean,0),big.mark=",")` and the median number is `r format(round(s2median,0),big.mark=",",scientific=FALSE)`. The equivalent values for the original data were `r format(round(smean,0),big.mark=",")` and `r format(round(smedian,0),big.mark=",",scientific=FALSE)` respectively. Therefore, imputing the missing data has increased both the mean value and the median value (curiously, the mean and median is identical).
+With infilled data, the mean number of steps taken per day is 10,766 and the median number is 10,766. The equivalent values for the original data were 9,354 and 10,395 respectively. Therefore, imputing the missing data has increased both the mean value and the median value (curiously, the mean and median is identical).
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
 
 Create a new dataset, based on the imputed dataset, with a factor variable to identify weekends and weekdays:
-```{r factor}
+
+```r
 facdat <- mutate(actinfill,daytype = factor(weekdays(as.Date(date)) %in% c("Saturday","Sunday"),
                  labels = c("Weekday","Weekend")))
 ```
 
 Calculate the average steps in each interval for weekends and weekdays
-```{r wenday_ave}
+
+```r
 avestep2 <- group_by(facdat,interval,daytype) %>%
             summarise(steps = mean(steps, na.rm = TRUE))
 wdayave <- filter(avestep2,daytype=="Weekday")
@@ -120,7 +139,8 @@ wendave <- filter(avestep2,daytype=="Weekend")
 ```
 
 Create a plot for weekend and weekday average steps per interval:
-```{r wenday_plot,fig.height=8,fig.width=10}
+
+```r
 par(mfrow=c(2,1))
 with(wdayave,plot(interval,steps,type = "l",xlab = "Five minute interval",
                   ylab = "average steps per day",
@@ -129,5 +149,7 @@ with(wendave,plot(interval,steps,type = "l",xlab = "Five minute interval",
                   ylab = "average steps per day",
                   main="Average number of steps per five minute interval on a weekend"))
 ```
+
+![](PA1_template_files/figure-html/wenday_plot-1.png)<!-- -->
 
 The weekday plots show more activity around morning and evening rush hour. Weekend plots show activity is more even throughout the day.
